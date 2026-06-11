@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Post #{{ post['id'] }} · Forum Inspector{% endblock %}
+{% block content %}
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+      <div>
+        <div class="muted" style="font-size:12px;">Post #{{ post['id'] }}{% if thread %} · Thread: {{ thread['title'] }}{% endif %}</div>
+        <h1 style="margin:4px 0 8px; font-size:24px;">{{ post['username'] }}</h1>
+        <div class="chips">
+          <span class="chip {% if post['has_embedding'] %}good{% endif %}">
+            <span class="badge-dot" style="background: {% if post['has_embedding'] %}#22d3ee{% else %}#4b5563{% endif %};"></span>
+            {% if post['has_embedding'] %}Embedding available{% else %}No embedding{% endif %}
+          </span>
+          <span class="chip badge">{{ post['file_count'] or 0 }} file{{ '' if post['file_count']==1 else 's' }}</span>
+          {% if thread %}
+            <span class="chip">Thread by {{ thread['creator'] }} ({{ thread['created_at'] }})</span>
+          {% endif %}
+        </div>
+      </div>
+      <a class="small-button" href="{{ url_for('index') }}">Back to list</a>
+    </div>
+
+    <div class="section">
+      <table class="table">
+        <tr><th>Posted at</th><td>{{ post['posted_at'] or 'unknown' }}</td></tr>
+        <tr><th>Thread URL</th><td>{{ post['thread_url'] }}</td></tr>
+        <tr><th>Post URL</th><td>{{ post['post_url'] }}</td></tr>
+        <tr><th>User URL</th><td>{{ post['user_url'] }}</td></tr>
+        <tr><th>Forum post id</th><td>{{ post['forum_post_id'] }}</td></tr>
+        {% if embedding %}
+          <tr><th>Embedding</th><td><span class="pill ok">{{ embedding.model }} · {{ embedding.dims }} dims · {{ embedding.created_at }}</span></td></tr>
+        {% else %}
+          <tr><th>Embedding</th><td><span class="pill fail">Not generated</span></td></tr>
+        {% endif %}
+        <tr>
+          <th>Attachments</th>
+          <td>
+            {% if attachments %}
+              <ul style="margin:0; padding-left:18px;">
+                {% for att in attachments %}
+                  <li>{{ att.filename }} ({{ att.mime_type or 'unknown type' }}{% if att.size %}, {{ att.size }}{% endif %})</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <span class="muted">None</span>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3 style="margin:0 0 8px;">Comment</h3>
+      <div class="card comment">{{ post['comment'] | e | replace('\n','<br>') | safe }}</div>
+    </div>
+  </div>
+{% endblock %}

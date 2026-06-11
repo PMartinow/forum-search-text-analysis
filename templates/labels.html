@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Embeddings & Labels{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <div class="panel">
+    <h2 style="margin:0 0 6px 0;">Embeddings & Labels</h2>
+    <p class="muted" style="margin:0;">First 10 posts with their labels, claims, and embedding info.</p>
+  </div>
+
+  {% for row in rows %}
+  <div class="card">
+    <div style="display:flex; justify-content: space-between; gap: 12px; align-items: baseline;">
+      <div>
+        <div class="chips">
+          <span class="chip badge">Post #{{ row.id }}</span>
+          {% if row.posted_at %}<span class="chip">{{ row.posted_at }}</span>{% endif %}
+          {% if row.username %}<span class="chip">by {{ row.username }}</span>{% endif %}
+        </div>
+      </div>
+      <a class="small-button" href="{{ url_for('post_detail', post_id=row.id) }}">Open</a>
+    </div>
+
+    <div class="section">
+      <details class="snippet-toggle">
+        <summary>
+          <span class="muted" style="font-size:13px;">Snippet (click to expand)</span>
+          <div style="margin-top:4px; color: var(--text); font-weight: 400;">
+            {{ row.snippet[:160] }}{% if row.snippet|length > 160 %}…{% endif %}
+          </div>
+        </summary>
+        <div class="comment" style="margin-top:8px;">{{ row.snippet }}</div>
+      </details>
+    </div>
+
+    <div class="section" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+      <div class="card" style="padding:12px;">
+        <div class="muted" style="font-size:13px; margin-bottom:6px;">Embedding</div>
+        {% if row.embedding %}
+          <div class="stack">
+            <span class="pill ok">Model: {{ row.embedding.model }}</span>
+            <span class="pill badge">Dims: {{ row.embedding.dims }}</span>
+            {% if row.embedding.created_at %}<span class="pill">Created: {{ row.embedding.created_at }}</span>{% endif %}
+          </div>
+        {% else %}
+          <span class="muted">No embedding stored.</span>
+        {% endif %}
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <div class="muted" style="font-size:13px; margin-bottom:6px;">Labels</div>
+        {% if row.labels %}
+          <div class="stack">
+            {% if row.labels.entities %}
+              <div class="muted" style="font-size:12px; margin-bottom:4px;">Areas</div>
+              <div class="chips">
+                {% if row.labels.entities.areas %}{% for a in row.labels.entities.areas %}<span class="chip badge">{{ a }}</span>{% endfor %}{% else %}<span class="muted">—</span>{% endif %}
+              </div>
+              <div class="muted" style="font-size:12px; margin:6px 0 4px 0;">Venues</div>
+              <div class="chips">
+                {% if row.labels.entities.venues %}{% for v in row.labels.entities.venues %}<span class="chip">{{ v }}</span>{% endfor %}{% else %}<span class="muted">—</span>{% endif %}
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <span class="muted">No labels stored.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="muted" style="font-size:13px; margin-bottom:6px;">Claims</div>
+      {% if row.claims %}
+      <table class="table" style="font-size:14px;">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Claim</th>
+            <th>Value</th>
+            <th>Quote</th>
+            <th>Conf</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in row.claims %}
+          <tr>
+            <td>{{ c.claim_type }}</td>
+            <td>{{ c.claim_text }}</td>
+            <td>
+              {% if c.extracted_value %}{{ c.extracted_value }} {{ c.currency or '' }}{% else %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td class="muted">{{ c.evidence_quote }}</td>
+            <td class="muted">{{ '%.2f'|format(c.confidence or 0) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <span class="muted">No claims.</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

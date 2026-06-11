@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Explore Posts · Forum Inspector{% endblock %}
+{% block content %}
+  <div class="workspace">
+    <div class="stack">
+      <div class="panel">
+        <div class="workspace-title">
+          <h3 style="margin:0;">Timeline & Filters</h3>
+          <span class="pill neutral">Scope</span>
+        </div>
+        <form method="get" action="{{ url_for('index') }}">
+          <label class="muted" style="font-size:12px;">Search</label>
+          <div class="search-box" style="margin-top:6px;">
+            <input type="text" name="q" placeholder="Search posts" value="{{ query }}">
+            <select name="mode" class="button secondary" style="min-width:140px;">
+              <option value="keyword" {% if mode == 'keyword' %}selected{% endif %}>Keyword (FTS)</option>
+              <option value="hybrid" {% if mode == 'hybrid' %}selected{% endif %}>Hybrid</option>
+              <option value="vector" {% if mode == 'vector' %}selected{% endif %}>Semantic</option>
+            </select>
+            <button class="button" type="submit">Search</button>
+          </div>
+          <div class="filter-row" style="margin-top:12px;">
+            <div>
+              <label class="muted" style="font-size:12px;">Start date</label>
+              <input type="date" name="start_date" value="{{ start_date }}">
+            </div>
+            <div>
+              <label class="muted" style="font-size:12px;">End date</label>
+              <input type="date" name="end_date" value="{{ end_date }}">
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="button secondary" type="submit">Apply</button>
+            <a class="button secondary" href="{{ url_for('index') }}">Clear</a>
+          </div>
+          <div class="section chips">
+            <span class="chip">{{ total }} result{{ '' if total == 1 else 's' }}</span>
+            {% if start_date %}<span class="chip badge">From {{ start_date }}</span>{% endif %}
+            {% if end_date %}<span class="chip badge">To {{ end_date }}</span>{% endif %}
+          </div>
+        </form>
+      </div>
+      {% if error %}
+        <div class="alert">Error: {{ error }}</div>
+      {% endif %}
+      {% if timeline %}
+      <div class="panel">
+        <div class="workspace-title">
+          <h3 style="margin:0;">Timeline</h3>
+          <span class="pill ok">Newest scope</span>
+        </div>
+        <p class="muted" style="margin:0 0 6px;">Posts per month (hover for count). Filters above constrain this view.</p>
+        <div class="timeline">
+          {% for bucket in timeline %}
+            <div class="timeline-bar" style="height: {{ 80 + bucket.ratio*80 }}px;" data-label="{{ bucket.bucket }} · {{ bucket.count }}"></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="stack">
+      <div class="panel">
+        <div class="workspace-title">
+          <h3 style="margin:0;">Results</h3>
+          {% if mode == 'keyword' %}
+            <span class="pill ok">Keyword</span>
+          {% elif mode == 'vector' %}
+            <span class="pill ok">Semantic</span>
+          {% else %}
+            <span class="pill ok">Hybrid</span>
+          {% endif %}
+        </div>
+        {% if mode == 'keyword' %}
+          <p class="muted" style="margin:0 0 10px;">Keyword BM25 search. Use Hybrid/Semantic to include vectors.</p>
+        {% elif mode == 'vector' %}
+          <p class="muted" style="margin:0 0 10px;">Semantic KNN search via sqlite-vec.</p>
+        {% else %}
+          <p class="muted" style="margin:0 0 10px;">Hybrid blends BM25 + vector scores.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        {% if rows %}
+          <div class="stack">
+            {% for row in rows %}
+              <a href="{{ url_for('post_detail', post_id=row['id']) }}" class="card-evidence">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                  <div>
+                    <div class="muted" style="font-size:12px;">Post #{{ row['id'] }} · {{ row['posted_at'] or 'unknown date' }}</div>
+                    <div style="font-weight:700;">{{ row['username'] }}</div>
+                    {% if row['thread_url'] %}
+                      <div class="muted" style="font-size:12px; margin-top:2px;">Thread: {{ row['thread_url'] }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="chips">
+                    <span class="chip {% if row['has_embedding'] %}good{% endif %}">
+                      <span class="badge-dot" style="background: {% if row['has_embedding'] %}#22d3ee{% else %}#4b5563{% endif %};"></span>
+                      {% if row['has_embedding'] %}Embedding{% else %}No embedding{% endif %}
+                    </span>
+                    <span class="chip badge">{{ row['file_count'] or 0 }} file{{ '' if row['file_count']==1 else 's' }}</span>
+                  </div>
+                </div>
+                <div class="section snippet" style="margin-bottom:6px;">
+                  {% if row['kw_score'] is not none %}
+                    {{ row['snippet']|e|replace('[','<mark>')|replace(']','</mark>')|safe }}
+                  {% elif row['snippet'] %}
+                    {{ row['snippet']|e }}
+                  {% else %}
+                    {{ row['comment'][:240]|e }}
+                  {% endif %}
+                </div>
+                <div class="muted" style="font-size:12px;">
+                  {% if row.get('hybrid_score') is not none %}
+                    Hybrid: {{ '%.3f' % row['hybrid_score'] }}
+                  {% endif %}
+                  {% if row.get('vec_score') is not none %}
+                    {% if row.get('hybrid_score') is not none %} · {% endif %}
+                    Vec: {{ '%.3f' % row['vec_score'] }}
+                  {% endif %}
+                  {% if row.get('kw_score') is not none %}
+                    {% if row.get('hybrid_score') is not none or row.get('vec_score') is not none %} · {% endif %}
+                    BM25: {{ '%.3f' % row['kw_score'] }}
+                  {% endif %}
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="muted">No posts found for the current filters.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
